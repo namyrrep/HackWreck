@@ -70,11 +70,32 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS for React frontend
+def _parse_cors_origins(value: str | None) -> list[str]:
+    if not value:
+        return ["http://localhost:3000", "http://localhost:5173"]
+    value = value.strip()
+    if value == "*":
+        return ["*"]
+    origins: list[str] = []
+    for origin in value.split(","):
+        normalized = origin.strip()
+        if not normalized:
+            continue
+        # Origins are compared as exact strings by the CORS middleware.
+        # Users sometimes paste values with a trailing slash; strip it.
+        normalized = normalized.rstrip("/")
+        origins.append(normalized)
+    return origins
+
+
+# CORS for frontend (configurable in production)
+_cors_origins = _parse_cors_origins(os.getenv("CORS_ORIGINS"))
+_cors_allows_any = "*" in _cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev servers
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=not _cors_allows_any,
     allow_methods=["*"],
     allow_headers=["*"],
 )

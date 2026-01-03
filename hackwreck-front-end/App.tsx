@@ -6,7 +6,7 @@ import AnalyzeSection from './components/AnalyzeSection';
 import TrendsSection from './components/TrendsSection';
 import AnalyzeProjectSection from './components/AnalyzeProjectSection';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 interface Stats {
   total_projects: number;
