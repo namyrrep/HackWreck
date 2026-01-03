@@ -21,7 +21,7 @@ def auto_insert_hack(github_url, status):
     existing = c.fetchone()
     if existing:
         conn.close()
-        print(f"⚠️  Duplicate detected: '{existing[1]}' already exists with this GitHub link (ID: {existing[0]})")
+        print(f"Duplicate detected: '{existing[1]}' already exists with this GitHub link (ID: {existing[0]})")
         return False
     conn.close()
     
@@ -85,7 +85,7 @@ def auto_insert_hack(github_url, status):
     
     conn.commit()
     conn.close()
-    print(f"✅ Successfully added: {data['name']}")
+    print(f"Successfully added: {data['name']}")
     return True
 
 def batch_insert_from_file(file_path, default_status=None):
@@ -101,7 +101,7 @@ def batch_insert_from_file(file_path, default_status=None):
         default_status: Default status if not specified per line (e.g., 'winner', 'participant')
     """
     if not os.path.exists(file_path):
-        print(f"❌ File not found: {file_path}")
+        print(f"File not found: {file_path}")
         return
     
     with open(file_path, 'r') as f:
@@ -111,7 +111,7 @@ def batch_insert_from_file(file_path, default_status=None):
     success_count = 0
     failed = []
     
-    print(f"\n📦 Starting batch insert of {total} projects...\n")
+    print(f"\nStarting batch insert of {total} projects...\n")
     
     for i, line in enumerate(lines, 1):
         line = line.strip()
@@ -128,7 +128,7 @@ def batch_insert_from_file(file_path, default_status=None):
             status = default_status
         
         if not status:
-            print(f"⚠️  Skipping {github_url} - no status provided")
+            print(f"Skipping {github_url} - no status provided")
             failed.append((github_url, "No status"))
             continue
         
@@ -138,13 +138,13 @@ def batch_insert_from_file(file_path, default_status=None):
             auto_insert_hack(github_url, status)
             success_count += 1
         except Exception as e:
-            print(f"❌ Failed: {e}")
+            print(f"Failed: {e}")
             failed.append((github_url, str(e)))
     
     print(f"\n{'='*50}")
-    print(f"✅ Batch insert complete: {success_count}/{total} successful")
+    print(f"Batch insert complete: {success_count}/{total} successful")
     if failed:
-        print(f"❌ Failed ({len(failed)}):")
+        print(f"Failed ({len(failed)}):")
         for url, error in failed:
             print(f"   - {url}: {error}")
 
@@ -202,20 +202,42 @@ def analyzeProjectForHackathon(github_url, hackathon_name, hackathon_theme=""):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    # Get winners matching the hackathon theme or project topic
-    search_term = hackathon_theme.lower() if hackathon_theme else project_data.get('topic', '').lower()
+    # Get the user's project framework and topic for matching
+    user_framework = project_data.get('framework', '').lower()
+    user_topic = project_data.get('topic', '').lower()
     
+    # Get winners with similar frameworks
     c.execute("""
         SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
         FROM hacks 
         WHERE LOWER(place) LIKE '%winner%' 
-        AND (LOWER(topic) LIKE ? OR LOWER(descriptions) LIKE ?)
+        AND LOWER(framework) LIKE ?
         ORDER BY ai_score DESC 
         LIMIT 5
-    """, (f'%{search_term}%', f'%{search_term}%'))
-    related_winners = c.fetchall()
+    """, (f'%{user_framework.split(",")[0].split("/")[0].strip()}%',))
+    framework_winners = c.fetchall()
     
-    # Also get top winners overall
+    # Get winners in similar category/topic
+    c.execute("""
+        SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
+        FROM hacks 
+        WHERE LOWER(place) LIKE '%winner%' 
+        AND LOWER(topic) LIKE ?
+        ORDER BY ai_score DESC 
+        LIMIT 5
+    """, (f'%{user_topic.split(",")[0].strip()}%',))
+    topic_winners = c.fetchall()
+    
+    # Combine and deduplicate related winners (framework + topic matches)
+    seen_names = set()
+    related_winners = []
+    for winner in framework_winners + topic_winners:
+        if winner[0] not in seen_names:
+            seen_names.add(winner[0])
+            related_winners.append(winner)
+    related_winners = related_winners[:8]  # Limit to 8
+    
+    # Also get top winners overall for broader trends
     c.execute("""
         SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
         FROM hacks 
@@ -268,7 +290,7 @@ def analyzeProjectForHackathon(github_url, hackathon_name, hackathon_theme=""):
     - **Strengths**: {', '.join(project_data.get('strengths', []))}
     - **Weaknesses**: {', '.join(project_data.get('weaknesses', []))}
 
-    ## WINNING PROJECTS IN SIMILAR CATEGORIES
+    ## WINNING PROJECTS WITH SIMILAR FRAMEWORK OR CATEGORY
     {related_winners_text}
 
     ## TOP WINNING PROJECTS OVERALL
@@ -279,36 +301,58 @@ def analyzeProjectForHackathon(github_url, hackathon_name, hackathon_theme=""):
 
     ---
 
-    Based on this data, provide a comprehensive improvement plan:
+    Create a ROADMAP-STYLE improvement plan. Be concise - use bullet points, not paragraphs.
+    Search the web to find relevant tutorials, documentation, and resources for each step.
 
-    1. **Project Assessment**: Brief analysis of where the project currently stands compared to winners
+    Format your response EXACTLY like this:
 
-    2. **Quick Wins** (can be done in a few hours):
-       - List 3-5 improvements that can be implemented quickly before the hackathon
+    ## CURRENT STATUS
+    Score: X/10 - Target: Y/10
+    One sentence on biggest gap vs winners.
 
-    3. **Feature Additions** (if time permits):
-       - Suggest 2-3 features that would make the project more competitive based on what winners have
+    ## ROADMAP
 
-    4. **Presentation Tips**:
-       - How to pitch this project effectively based on winning project descriptions
-       - What to emphasize in the README/demo
+    ### Phase 1: Quick Wins (2-4 hours)
+    - [ ] **Task 1**: Brief description
+          Resource: [Link title](URL)
+    - [ ] **Task 2**: Brief description
+          Resource: [Link title](URL)
+    - [ ] **Task 3**: Brief description
+          Resource: [Link title](URL)
 
-    5. **Technical Recommendations**:
-       - Any framework/tech suggestions based on winning trends
-       - Integration ideas that could make it stand out
+    ### Phase 2: Core Improvements (4-8 hours)
+    - [ ] **Task 1**: Brief description
+          Resource: [Link title](URL)
+    - [ ] **Task 2**: Brief description
+          Resource: [Link title](URL)
 
-    6. **Hackathon-Specific Advice**:
-       - How to tailor the project to "{hackathon_name}" specifically
-       - What judges typically look for in {hackathon_theme if hackathon_theme else "this type of"} hackathons
+    ### Phase 3: Polish & Presentation (2-4 hours)
+    - [ ] **Task 1**: Brief description
+          Resource: [Link title](URL)
+    - [ ] **Task 2**: Brief description
+          Resource: [Link title](URL)
 
-    7. **Predicted Score After Improvements**: X/10 (with explanation)
+    ## WINNER INSIGHTS
+    What "{hackathon_name}" winners typically have:
+    - Insight 1
+    - Insight 2
+    - Insight 3
 
-    Be specific, actionable, and reference the winning projects when relevant.
+    ## PITCH IN 30 SECONDS
+    Write a 2-3 sentence pitch they should use.
+
+    ## PREDICTED IMPROVEMENT
+    Before: X/10 - After: Y/10
+
+    Keep each task to ONE LINE. Include real, working URLs from your web search.
     """
     
     suggestions_response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=suggestions_prompt
+        contents=suggestions_prompt,
+        config=types.GenerateContentConfig(
+            tools=[{"google_search": {}}]  # Enable web search for resources
+        )
     )
     
     return {
@@ -432,42 +476,69 @@ def findTrendswithGemini(user_category, user_framework, user_description):
 """
     
     prompt = f"""
-You are a hackathon strategy advisor. Analyze the following curated database of hackathon projects to identify winning trends and provide actionable advice.
+You are a hackathon judge. Analyze the database and give DIRECT, CONCISE answers.
 
-## DATABASE SCHEMA
-{schema}
-
-## DATABASE STATISTICS & TRENDS
+## DATABASE STATS
 {stats_summary}
 
-## RELEVANT DATA (Prioritized for your analysis)
-
+## WINNERS IN '{user_category}' CATEGORY
 {winners_in_category}
+
+## OTHER TOP WINNERS
 {winners_other}
+
+## NON-WINNERS (FOR COMPARISON)
 {participants_data}
 
-## USER'S PROJECT IDEA
-- **Category/Topic**: {user_category}
-- **Framework/Technologies**: {user_framework}
-- **Project Description**: {user_description}
+## USER'S IDEA
+- Category: {user_category}
+- Framework: {user_framework}
+- Description: {user_description}
 
 ---
 
-Please provide a focused analysis:
+Format your response EXACTLY like this:
 
-1. **Winning Trends Analysis**: What patterns do you see among winning projects? (common frameworks, popular categories, what differentiates winners from participants)
+## WHAT WINNERS DO
 
-2. **Category-Specific Insights**: Based on winners in '{user_category}', what makes projects stand out in this space?
+| Pattern | Example from Data |
+|---------|------------------|
+| Pattern 1 | "Project X did this..." |
+| Pattern 2 | "Project Y shows..." |
+| Pattern 3 | ... |
+| Pattern 4 | ... |
+| Pattern 5 | ... |
 
-3. **Framework Recommendation**: Is '{user_framework}' commonly used by winners? Based on the top frameworks data, should they consider alternatives?
+## WHAT LOSERS DO
 
-4. **Comparison to Winners**: How does the user's project idea compare to the winners shown? What are the gaps?
+| Mistake | Why It Fails |
+|---------|-------------|
+| Mistake 1 | Brief reason |
+| Mistake 2 | Brief reason |
+| Mistake 3 | Brief reason |
 
-5. **Actionable Recommendations**: 3-5 specific, concrete suggestions to improve their chances of winning.
+## YOUR IDEA: VERDICT
 
-6. **Pitch Tips**: Based on how winning projects are described, how should they present their idea?
+**Score: X/10**
 
-Be specific and reference actual projects from the data when giving advice.
+### Strengths (What Sets You Apart)
+- Strength 1
+- Strength 2
+
+### Gaps (What's Missing vs Winners)
+- Gap 1 - How to fix
+- Gap 2 - How to fix
+
+## TOP 3 ACTIONS
+
+1. **Action 1**: One sentence max
+2. **Action 2**: One sentence max
+3. **Action 3**: One sentence max
+
+## YOUR WINNING PITCH
+> Write a 2-sentence pitch they should use based on winner patterns.
+
+Be brutally honest. Reference specific projects from the data. No fluff.
 """
     
     response = client.models.generate_content(

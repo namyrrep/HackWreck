@@ -110,7 +110,7 @@ const TrendsSection: React.FC = () => {
               <span className="uppercase">ANALYZING TRENDS...</span>
             </>
           ) : (
-            <span className="uppercase">🔥 WRECK IT</span>
+            <span className="uppercase">WRECK IT</span>
           )}
         </button>
 
@@ -124,7 +124,6 @@ const TrendsSection: React.FC = () => {
       {analysis && (
         <div className="mt-8 p-6 bg-slate-950 border border-emerald-500/30 rounded-lg">
           <div className="flex items-center space-x-2 mb-4">
-            <span className="text-emerald-500 text-lg">🎯</span>
             <h3 className="text-lg font-bold font-mono text-emerald-500 uppercase">AI ANALYSIS</h3>
           </div>
           <div className="prose prose-invert prose-emerald max-w-none">

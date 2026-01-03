@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     # Startup checks
     print("\n" + "="*50)
-    print("🚀 HackWreck API Starting...")
+    print("HackWreck API Starting...")
     print("="*50)
     
     # Check 1: Database
@@ -28,15 +28,15 @@ async def lifespan(app: FastAPI):
         c.execute("SELECT COUNT(*) FROM hacks")
         count = c.fetchone()[0]
         conn.close()
-        print(f"✅ Database: Connected ({count} projects)")
+        print(f"[OK] Database: Connected ({count} projects)")
     except Exception as e:
-        print(f"❌ Database: {e}")
+        print(f"[ERROR] Database: {e}")
     
     # Check 2: API Key
     if GOOGLE_API_KEY:
-        print(f"✅ API Key: Configured ({GOOGLE_API_KEY[:3]}...)")
+        print(f"[OK] API Key: Configured ({GOOGLE_API_KEY[:3]}...)")
     else:
-        print("❌ API Key: Missing - set GOOGLE_API_KEY in .env")
+        print("[ERROR] API Key: Missing - set GOOGLE_API_KEY in .env")
     
     # Check 3: Gemini API connection
     try:
@@ -45,18 +45,18 @@ async def lifespan(app: FastAPI):
             contents="Reply with only: OK"
         )
         if response.text:
-            print("✅ Gemini API: Connected")
+            print("[OK] Gemini API: Connected")
     except Exception as e:
-        print(f"❌ Gemini API: {e}")
+        print(f"[ERROR] Gemini API: {e}")
     
     print("="*50)
-    print("📍 API Docs: http://localhost:8000/docs")
+    print("API Docs: http://localhost:8000/docs")
     print("="*50 + "\n")
     
     yield  # Server runs here
     
     # Shutdown
-    print("\n👋 HackWreck API shutting down...")
+    print("\nHackWreck API shutting down...")
 
 
 app = FastAPI(

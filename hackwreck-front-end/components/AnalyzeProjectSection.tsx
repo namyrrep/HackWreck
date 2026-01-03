@@ -145,7 +145,7 @@ const AnalyzeProjectSection: React.FC = () => {
               <span className="uppercase">ANALYZING PROJECT...</span>
             </>
           ) : (
-            <span className="uppercase">🚀 OPTIMIZE PROJECT</span>
+            <span className="uppercase">OPTIMIZE PROJECT</span>
           )}
         </button>
 
@@ -162,7 +162,6 @@ const AnalyzeProjectSection: React.FC = () => {
           <div className="p-6 bg-slate-950 border border-amber-500/30 rounded-lg">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <span className="text-amber-500 text-lg">📊</span>
                 <h3 className="text-lg font-bold font-mono text-amber-500 uppercase">PROJECT ANALYSIS</h3>
               </div>
               <div className="px-3 py-1 bg-amber-500/20 border border-amber-500/50 rounded-full">
@@ -217,7 +216,6 @@ const AnalyzeProjectSection: React.FC = () => {
           {result.related_winners.length > 0 && (
             <div className="p-6 bg-slate-950 border border-slate-700 rounded-lg">
               <div className="flex items-center space-x-2 mb-4">
-                <span className="text-emerald-500 text-lg">🏆</span>
                 <h3 className="text-lg font-bold font-mono text-slate-300 uppercase">SIMILAR WINNING PROJECTS</h3>
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -238,7 +236,6 @@ const AnalyzeProjectSection: React.FC = () => {
           {/* AI Suggestions */}
           <div className="p-6 bg-slate-950 border border-emerald-500/30 rounded-lg">
             <div className="flex items-center space-x-2 mb-4">
-              <span className="text-emerald-500 text-lg">💡</span>
               <h3 className="text-lg font-bold font-mono text-emerald-500 uppercase">IMPROVEMENT PLAN</h3>
             </div>
             <div className="prose prose-invert prose-emerald max-w-none">
