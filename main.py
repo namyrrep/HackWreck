@@ -1,0 +1,224 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from contextlib import asynccontextmanager
+import uvicorn
+import sys
+import os
+
+# Add DevScrape to path so we can import from scrape.py
+sys.path.append(os.path.join(os.path.dirname(__file__), 'DevScrape'))
+from scrape import auto_insert_hack, findTrendswithGemini, DB_PATH, client, GOOGLE_API_KEY
+
+import sqlite3
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown events"""
+    # Startup checks
+    print("\n" + "="*50)
+    print("🚀 HackWreck API Starting...")
+    print("="*50)
+    
+    # Check 1: Database
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM hacks")
+        count = c.fetchone()[0]
+        conn.close()
+        print(f"✅ Database: Connected ({count} projects)")
+    except Exception as e:
+        print(f"❌ Database: {e}")
+    
+    # Check 2: API Key
+    if GOOGLE_API_KEY:
+        print(f"✅ API Key: Configured ({GOOGLE_API_KEY[:3]}...)")
+    else:
+        print("❌ API Key: Missing - set GOOGLE_API_KEY in .env")
+    
+    # Check 3: Gemini API connection
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents="Reply with only: OK"
+        )
+        if response.text:
+            print("✅ Gemini API: Connected")
+    except Exception as e:
+        print(f"❌ Gemini API: {e}")
+    
+    print("="*50)
+    print("📍 API Docs: http://localhost:8000/docs")
+    print("="*50 + "\n")
+    
+    yield  # Server runs here
+    
+    # Shutdown
+    print("\n👋 HackWreck API shutting down...")
+
+
+app = FastAPI(
+    title="HackWreck API", 
+    description="AI-powered hackathon trend analysis",
+    lifespan=lifespan
+)
+
+# CORS for React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev servers
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Request/Response Models
+class InsertRequest(BaseModel):
+    github_url: str
+    status: str  # 'winner' or 'participant'
+
+
+class InsertResponse(BaseModel):
+    success: bool
+    message: str
+    project_name: str | None = None
+
+
+class TrendRequest(BaseModel):
+    category: str
+    framework: str
+    description: str
+
+
+class TrendResponse(BaseModel):
+    success: bool
+    analysis: str
+
+
+class ProjectResponse(BaseModel):
+    id: int
+    name: str
+    framework: str | None
+    githubLink: str | None
+    place: str | None
+    topic: str | None
+    descriptions: str | None
+    ai_score: float | None
+    ai_reasoning: str | None
+
+
+# Endpoints
+@app.get("/")
+async def root():
+    return {"message": "HackWreck API is running", "docs": "/docs"}
+
+
+@app.post("/api/insert", response_model=InsertResponse)
+async def insert_project(request: InsertRequest):
+    """
+    Analyze a GitHub repository and insert it into the database.
+    Gemini will extract project details and assign an AI score.
+    """
+    try:
+        result = auto_insert_hack(request.github_url, request.status)
+        if result:
+            return InsertResponse(
+                success=True,
+                message="Project successfully added",
+                project_name=None  # Would need to modify auto_insert_hack to return the name
+            )
+        else:
+            return InsertResponse(
+                success=False,
+                message="Duplicate project - already exists in database"
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/trends", response_model=TrendResponse)
+async def get_trends(request: TrendRequest):
+    """
+    Get AI-powered trend analysis and advice for your hackathon project idea.
+    """
+    try:
+        analysis = findTrendswithGemini(
+            request.category,
+            request.framework,
+            request.description
+        )
+        return TrendResponse(success=True, analysis=analysis)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/projects", response_model=list[ProjectResponse])
+async def get_all_projects():
+    """
+    Get all projects from the database.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT id, name, framework, githubLink, place, topic, descriptions, ai_score, ai_reasoning FROM hacks")
+    rows = c.fetchall()
+    conn.close()
+    
+    return [ProjectResponse(**dict(row)) for row in rows]
+
+
+@app.get("/api/projects/winners", response_model=list[ProjectResponse])
+async def get_winners():
+    """
+    Get all winning projects from the database.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT id, name, framework, githubLink, place, topic, descriptions, ai_score, ai_reasoning FROM hacks WHERE LOWER(place) LIKE '%winner%'")
+    rows = c.fetchall()
+    conn.close()
+    
+    return [ProjectResponse(**dict(row)) for row in rows]
+
+
+@app.get("/api/stats")
+async def get_stats():
+    """
+    Get database statistics.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    c.execute("SELECT COUNT(*) FROM hacks")
+    total = c.fetchone()[0]
+    
+    c.execute("SELECT COUNT(*) FROM hacks WHERE LOWER(place) LIKE '%winner%'")
+    winners = c.fetchone()[0]
+    
+    c.execute("SELECT AVG(ai_score) FROM hacks WHERE LOWER(place) LIKE '%winner%'")
+    avg_winner_score = c.fetchone()[0] or 0
+    
+    c.execute("SELECT framework, COUNT(*) as cnt FROM hacks WHERE LOWER(place) LIKE '%winner%' GROUP BY framework ORDER BY cnt DESC LIMIT 5")
+    top_frameworks = [{"framework": fw, "count": cnt} for fw, cnt in c.fetchall()]
+    
+    c.execute("SELECT topic, COUNT(*) as cnt FROM hacks WHERE LOWER(place) LIKE '%winner%' GROUP BY topic ORDER BY cnt DESC LIMIT 5")
+    top_categories = [{"category": cat, "count": cnt} for cat, cnt in c.fetchall()]
+    
+    conn.close()
+    
+    return {
+        "total_projects": total,
+        "total_winners": winners,
+        "total_participants": total - winners,
+        "avg_winner_score": round(avg_winner_score, 1),
+        "top_frameworks": top_frameworks,
+        "top_categories": top_categories
+    }
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
