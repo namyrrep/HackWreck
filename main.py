@@ -8,7 +8,7 @@ import os
 
 # Add DevScrape to path so we can import from scrape.py
 sys.path.append(os.path.join(os.path.dirname(__file__), 'DevScrape'))
-from scrape import auto_insert_hack, findTrendswithGemini, DB_PATH, client, GOOGLE_API_KEY
+from scrape import auto_insert_hack, findTrendswithGemini, analyzeProjectForHackathon, DB_PATH, client, GOOGLE_API_KEY
 
 import sqlite3
 
@@ -98,6 +98,21 @@ class TrendResponse(BaseModel):
     analysis: str
 
 
+class ProjectAnalysisRequest(BaseModel):
+    github_url: str
+    hackathon_name: str
+    hackathon_theme: str = ""
+
+
+class ProjectAnalysisResponse(BaseModel):
+    success: bool
+    project_analysis: dict
+    suggestions: str
+    related_winners: list
+    hackathon_name: str
+    hackathon_theme: str
+
+
 class ProjectResponse(BaseModel):
     id: int
     name: str
@@ -151,6 +166,30 @@ async def get_trends(request: TrendRequest):
             request.description
         )
         return TrendResponse(success=True, analysis=analysis)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/analyze-project", response_model=ProjectAnalysisResponse)
+async def analyze_project_for_hackathon(request: ProjectAnalysisRequest):
+    """
+    Analyze an existing GitHub project and provide improvement suggestions
+    for a specific hackathon based on previous winners.
+    """
+    try:
+        result = analyzeProjectForHackathon(
+            request.github_url,
+            request.hackathon_name,
+            request.hackathon_theme
+        )
+        return ProjectAnalysisResponse(
+            success=True,
+            project_analysis=result["project_analysis"],
+            suggestions=result["suggestions"],
+            related_winners=result["related_winners"],
+            hackathon_name=result["hackathon_name"],
+            hackathon_theme=result["hackathon_theme"]
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

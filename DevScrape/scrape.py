@@ -149,6 +149,177 @@ def batch_insert_from_file(file_path, default_status=None):
             print(f"   - {url}: {error}")
 
 
+def analyzeProjectForHackathon(github_url, hackathon_name, hackathon_theme=""):
+    """
+    Analyze an existing GitHub project and provide suggestions for a specific hackathon
+    based on previous winning projects in the database.
+    
+    Args:
+        github_url: The GitHub URL of the user's current project
+        hackathon_name: Name of the hackathon they're planning to enter
+        hackathon_theme: Optional theme/track of the hackathon (e.g., "AI for Good", "FinTech")
+    """
+    # First, analyze the user's GitHub project
+    project_analysis_prompt = f"""
+    Analyze this GitHub repository: {github_url}
+    
+    Extract and return ONLY a JSON object:
+    {{
+        "name": "Project Name",
+        "framework": "Primary Framework/Languages used",
+        "topic": "Category (AI, FinTech, HealthTech, etc.)",
+        "description": "2-3 sentence summary of what it does",
+        "strengths": ["strength1", "strength2", "strength3"],
+        "weaknesses": ["weakness1", "weakness2", "weakness3"],
+        "current_score": 0.0
+    }}
+    
+    Rate current_score from 0.0 to 10.0 based on hackathon-readiness.
+    """
+    
+    project_response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=project_analysis_prompt,
+        config=types.GenerateContentConfig(
+            tools=[{"url_context": {}}]
+        )
+    )
+    
+    # Parse project analysis
+    response_text = project_response.text.strip()
+    if "```json" in response_text:
+        start = response_text.find("```json") + 7
+        end = response_text.find("```", start)
+        response_text = response_text[start:end].strip()
+    elif "```" in response_text:
+        start = response_text.find("```") + 3
+        end = response_text.find("```", start)
+        response_text = response_text[start:end].strip()
+    
+    project_data = json.loads(response_text)
+    
+    # Fetch relevant winners from database
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Get winners matching the hackathon theme or project topic
+    search_term = hackathon_theme.lower() if hackathon_theme else project_data.get('topic', '').lower()
+    
+    c.execute("""
+        SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
+        FROM hacks 
+        WHERE LOWER(place) LIKE '%winner%' 
+        AND (LOWER(topic) LIKE ? OR LOWER(descriptions) LIKE ?)
+        ORDER BY ai_score DESC 
+        LIMIT 5
+    """, (f'%{search_term}%', f'%{search_term}%'))
+    related_winners = c.fetchall()
+    
+    # Also get top winners overall
+    c.execute("""
+        SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
+        FROM hacks 
+        WHERE LOWER(place) LIKE '%winner%'
+        ORDER BY ai_score DESC 
+        LIMIT 5
+    """)
+    top_winners = c.fetchall()
+    
+    # Get framework stats
+    c.execute("""
+        SELECT framework, COUNT(*) as cnt 
+        FROM hacks 
+        WHERE LOWER(place) LIKE '%winner%' 
+        GROUP BY framework 
+        ORDER BY cnt DESC 
+        LIMIT 5
+    """)
+    top_frameworks = c.fetchall()
+    
+    conn.close()
+    
+    # Format winner data
+    def format_winners(winners):
+        if not winners:
+            return "No matching winners found."
+        result = ""
+        for name, framework, topic, desc, score, reasoning in winners:
+            result += f"\n- **{name}** ({topic}) - Score: {score}/10\n  Framework: {framework}\n  {desc}\n"
+        return result
+    
+    related_winners_text = format_winners(related_winners)
+    top_winners_text = format_winners(top_winners)
+    frameworks_text = "\n".join([f"- {fw}: {cnt} wins" for fw, cnt in top_frameworks]) if top_frameworks else "No data"
+    
+    # Generate improvement suggestions
+    suggestions_prompt = f"""
+    You are a hackathon coach. A developer wants to enter their project into a hackathon and needs advice on how to improve it to maximize their chances of winning.
+
+    ## HACKATHON DETAILS
+    - **Hackathon Name**: {hackathon_name}
+    - **Theme/Track**: {hackathon_theme if hackathon_theme else "General"}
+
+    ## USER'S CURRENT PROJECT
+    - **Name**: {project_data.get('name', 'Unknown')}
+    - **Framework**: {project_data.get('framework', 'Unknown')}
+    - **Category**: {project_data.get('topic', 'Unknown')}
+    - **Description**: {project_data.get('description', 'No description')}
+    - **Current Score**: {project_data.get('current_score', 'N/A')}/10
+    - **Strengths**: {', '.join(project_data.get('strengths', []))}
+    - **Weaknesses**: {', '.join(project_data.get('weaknesses', []))}
+
+    ## WINNING PROJECTS IN SIMILAR CATEGORIES
+    {related_winners_text}
+
+    ## TOP WINNING PROJECTS OVERALL
+    {top_winners_text}
+
+    ## MOST SUCCESSFUL FRAMEWORKS
+    {frameworks_text}
+
+    ---
+
+    Based on this data, provide a comprehensive improvement plan:
+
+    1. **Project Assessment**: Brief analysis of where the project currently stands compared to winners
+
+    2. **Quick Wins** (can be done in a few hours):
+       - List 3-5 improvements that can be implemented quickly before the hackathon
+
+    3. **Feature Additions** (if time permits):
+       - Suggest 2-3 features that would make the project more competitive based on what winners have
+
+    4. **Presentation Tips**:
+       - How to pitch this project effectively based on winning project descriptions
+       - What to emphasize in the README/demo
+
+    5. **Technical Recommendations**:
+       - Any framework/tech suggestions based on winning trends
+       - Integration ideas that could make it stand out
+
+    6. **Hackathon-Specific Advice**:
+       - How to tailor the project to "{hackathon_name}" specifically
+       - What judges typically look for in {hackathon_theme if hackathon_theme else "this type of"} hackathons
+
+    7. **Predicted Score After Improvements**: X/10 (with explanation)
+
+    Be specific, actionable, and reference the winning projects when relevant.
+    """
+    
+    suggestions_response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=suggestions_prompt
+    )
+    
+    return {
+        "project_analysis": project_data,
+        "suggestions": suggestions_response.text,
+        "related_winners": [{"name": w[0], "framework": w[1], "topic": w[2], "score": w[4]} for w in related_winners],
+        "hackathon_name": hackathon_name,
+        "hackathon_theme": hackathon_theme
+    }
+
+
 def findTrendswithGemini(user_category, user_framework, user_description):
     """
     Analyze winning hackathon trends and provide advice based on user's project idea.

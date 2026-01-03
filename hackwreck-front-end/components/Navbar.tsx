@@ -15,10 +15,11 @@ const Navbar: React.FC = () => {
         </div>
         
         <div className="hidden md:flex items-center space-x-8 font-mono text-sm">
-          <a href="#analyze" className="text-slate-300 hover:text-emerald-400 transition-colors uppercase tracking-widest text-xs">wreck</a>
-          <a href="#search" className="text-slate-300 hover:text-emerald-400 transition-colors uppercase tracking-widest text-xs">search</a>
+          <a href="#analyze" className="text-slate-300 hover:text-emerald-400 transition-colors uppercase tracking-widest text-xs">add hack</a>
+          <a href="#optimize" className="text-slate-300 hover:text-amber-400 transition-colors uppercase tracking-widest text-xs">optimize</a>
+          <a href="#trends" className="text-slate-300 hover:text-emerald-400 transition-colors uppercase tracking-widest text-xs">wreck</a>
           <a 
-            href="#analyze"
+            href="#trends"
             className="px-4 py-2 bg-emerald-500 text-slate-950 font-bold rounded hover:bg-emerald-400 transition-all hover:scale-105 hacker-glow text-xs uppercase"
           >
             GET STARTED

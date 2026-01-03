@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 
 interface AnalyzeSectionProps {
   onComplete: () => void;
+  hackCount: number;
 }
 
-const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({ onComplete }) => {
+const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({ onComplete, hackCount }) => {
   const [githubUrl, setGithubUrl] = useState('');
   const [devpostUrl, setDevpostUrl] = useState('');
   const [status, setStatus] = useState<'win' | 'lose'>('lose');
@@ -54,12 +55,11 @@ const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({ onComplete }) => {
     setMessage(null);
 
     try {
-      const response = await fetch('http://localhost:8000/analyze', {
+      const response = await fetch('http://localhost:8000/api/insert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           github_url: githubUrl, 
-          devpost_url: devpostUrl,
           status: status === 'win' ? 'Winner' : 'Participant' 
         }),
       });
@@ -84,9 +84,15 @@ const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({ onComplete }) => {
 
   return (
     <div className="bg-slate-900/50 hacker-border rounded-xl p-6 md:p-10 hacker-glow">
-      <div className="flex items-center space-x-3 mb-8">
-        <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-        <h2 className="text-2xl font-bold font-mono text-emerald-500 uppercase tracking-tight">ADD A HACK</h2>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-3">
+          <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+          <h2 className="text-2xl font-bold font-mono text-emerald-500 uppercase tracking-tight">ADD A HACK</h2>
+        </div>
+        <div className="flex items-center space-x-2 px-3 py-1.5 bg-slate-950 border border-emerald-500/30 rounded-lg">
+          <span className="text-emerald-500 font-mono font-bold text-lg">{hackCount}</span>
+          <span className="text-slate-400 font-mono text-xs uppercase">hacks stored</span>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

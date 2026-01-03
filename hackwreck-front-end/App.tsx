@@ -3,42 +3,36 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import AnalyzeSection from './components/AnalyzeSection';
-import SearchSection from './components/SearchSection';
-import { HackProject } from './types';
+import TrendsSection from './components/TrendsSection';
+import AnalyzeProjectSection from './components/AnalyzeProjectSection';
 
 const API_BASE_URL = 'http://localhost:8000';
 
-const App: React.FC = () => {
-  const [projects, setProjects] = useState<HackProject[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface Stats {
+  total_projects: number;
+  total_winners: number;
+  total_participants: number;
+  avg_winner_score: number;
+}
 
-  const fetchProjects = useCallback(async (query: string = '') => {
-    setIsSearching(true);
-    setError(null);
+const App: React.FC = () => {
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      
-      if (!response.ok) throw new Error('Failed to fetch projects');
-      
-      const data = await response.json();
-      setProjects(data.projects || []);
+      const response = await fetch(`${API_BASE_URL}/api/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
     } catch (err) {
-      console.error(err);
-      setError('Could not connect to the backend server. Make sure FastAPI is running on port 8000.');
-    } finally {
-      setIsSearching(false);
+      console.error('Failed to fetch stats:', err);
     }
   }, []);
 
   useEffect(() => {
-    fetchProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchStats();
+  }, [fetchStats]);
 
   return (
     <div className="min-h-screen hacker-gradient">
@@ -48,16 +42,15 @@ const App: React.FC = () => {
         <Hero />
         
         <div id="analyze">
-          <AnalyzeSection onComplete={() => fetchProjects()} />
+          <AnalyzeSection onComplete={() => fetchStats()} hackCount={stats?.total_projects || 0} />
         </div>
 
-        <div id="search" className="scroll-mt-20">
-          <SearchSection 
-            projects={projects} 
-            isSearching={isSearching} 
-            onSearch={fetchProjects} 
-            error={error}
-          />
+        <div id="optimize" className="scroll-mt-20">
+          <AnalyzeProjectSection />
+        </div>
+
+        <div id="trends" className="scroll-mt-20">
+          <TrendsSection />
         </div>
       </main>
 
