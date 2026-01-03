@@ -1,0 +1,5 @@
+{
+  "name": "HackWreck Front End",
+  "description": "A hacker-themed hackathon project analyzer and repository search engine powered by Gemini AI and FastAPI.",
+  "requestFramePermissions": []
+}
