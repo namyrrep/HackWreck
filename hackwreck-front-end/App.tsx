@@ -6,7 +6,7 @@ import AnalyzeSection from './components/AnalyzeSection';
 import TrendsSection from './components/TrendsSection';
 import AnalyzeProjectSection from './components/AnalyzeProjectSection';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface Stats {
   total_projects: number;
@@ -41,16 +41,16 @@ const App: React.FC = () => {
       <main className="container mx-auto px-4 py-8 space-y-16">
         <Hero />
         
-        <div id="analyze">
-          <AnalyzeSection onComplete={() => fetchStats()} hackCount={stats?.total_projects || 0} />
+        <div id="wreck" className="scroll-mt-20">
+          <TrendsSection />
         </div>
 
         <div id="optimize" className="scroll-mt-20">
           <AnalyzeProjectSection />
         </div>
 
-        <div id="trends" className="scroll-mt-20">
-          <TrendsSection />
+        <div id="add-hack" className="scroll-mt-20">
+          <AnalyzeSection onComplete={() => fetchStats()} hackCount={stats?.total_projects || 0} />
         </div>
       </main>
 

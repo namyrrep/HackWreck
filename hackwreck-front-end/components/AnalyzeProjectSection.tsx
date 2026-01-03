@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface ProjectAnalysis {
   name: string;
@@ -19,6 +19,7 @@ interface RelatedWinner {
   framework: string;
   topic: string;
   score: number;
+  githubLink?: string;
 }
 
 interface AnalysisResult {
@@ -220,15 +221,24 @@ const AnalyzeProjectSection: React.FC = () => {
                 <h3 className="text-lg font-bold font-mono text-slate-300 uppercase">SIMILAR WINNING PROJECTS</h3>
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {result.related_winners.map((winner, i) => (
-                  <div key={i} className="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                {result.related_winners.slice(0, 6).map((winner, i) => (
+                  <a 
+                    key={i} 
+                    href={winner.githubLink || '#'} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-3 bg-slate-900 border border-slate-800 rounded-lg hover:border-emerald-500/50 hover:bg-slate-800 transition-all cursor-pointer block"
+                  >
                     <div className="font-mono text-sm text-white font-bold truncate">{winner.name}</div>
                     <div className="text-xs text-slate-500 font-mono mt-1">{winner.topic}</div>
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-xs text-slate-500 font-mono">{winner.framework}</span>
+                      <span className="text-xs text-slate-500 font-mono truncate max-w-[60%]">{winner.framework}</span>
                       <span className="text-xs font-mono text-emerald-400">{winner.score}/10</span>
                     </div>
-                  </div>
+                    {winner.githubLink && (
+                      <div className="text-xs text-amber-500/70 font-mono mt-2 truncate">↗ View on GitHub</div>
+                    )}
+                  </a>
                 ))}
               </div>
             </div>

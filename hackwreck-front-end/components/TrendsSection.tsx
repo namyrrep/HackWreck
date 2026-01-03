@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const TrendsSection: React.FC = () => {
   const [category, setCategory] = useState('');
@@ -55,7 +55,7 @@ const TrendsSection: React.FC = () => {
       </div>
 
       <p className="text-slate-400 text-sm font-mono mb-6">
-        Get AI-powered insights on how to improve your hackathon project based on winning trends from our database.
+        Plan your next hackathon project. Describe your idea and get AI-powered recommendations based on winning trends from our database.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">

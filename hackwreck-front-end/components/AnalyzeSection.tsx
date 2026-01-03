@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 interface AnalyzeSectionProps {
   onComplete: () => void;
   hackCount: number;
@@ -55,7 +57,7 @@ const AnalyzeSection: React.FC<AnalyzeSectionProps> = ({ onComplete, hackCount }
     setMessage(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/insert', {
+      const response = await fetch(`${API_BASE_URL}/api/insert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

@@ -109,16 +109,31 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
     project_analysis_prompt = f"""
     Analyze this GitHub repository: {github_url}
     
+    Focus on the ACTUAL CODE and project structure. Analyze:
+    - The README, code files, and project architecture
+    - Technical implementation quality
+    - Feature completeness for a hackathon demo
+    - Code organization and documentation
+    
+    DO NOT mention GitHub stars, forks, or community engagement - this is a hackathon project.
+    
     Extract and return ONLY a JSON object:
     {{
         "name": "Project Name",
         "framework": "Primary Framework/Languages used",
         "topic": "Category (AI, FinTech, HealthTech, etc.)",
         "description": "2-3 sentence summary of what it does",
-        "strengths": ["strength1", "strength2", "strength3"],
-        "weaknesses": ["weakness1", "weakness2", "weakness3"],
+        "strengths": ["code-based strength 1", "code-based strength 2", "code-based strength 3"],
+        "weaknesses": ["code-based weakness 1", "code-based weakness 2", "code-based weakness 3"],
         "current_score": 0.0
     }}
+    
+    For strengths/weaknesses, focus on:
+    - Code quality and architecture
+    - Feature implementation
+    - Demo-readiness
+    - Technical innovation
+    - Documentation quality
     
     Rate current_score from 0.0 to 10.0 based on hackathon-readiness.
     """
@@ -148,7 +163,7 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
         if winner[0] not in seen_names:
             seen_names.add(winner[0])
             related_winners.append(winner)
-    related_winners = related_winners[:8]  # Limit to 8
+    related_winners = related_winners[:6]  # Limit to 6
     
     # Get top winners overall and framework stats
     top_winners = get_top_winners(limit=5)
@@ -160,7 +175,7 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
         if not winners:
             return "No matching winners found."
         result = ""
-        for name, framework, topic, desc, score, reasoning in winners:
+        for name, framework, topic, desc, score, reasoning, github_link in winners:
             result += f"\n- **{name}** ({topic}) - Score: {score}/10\n  Framework: {framework}\n  {desc}\n"
         return result
     
@@ -277,7 +292,7 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
     return {
         "project_analysis": project_data,
         "suggestions": suggestions_response.text,
-        "related_winners": [{"name": w[0], "framework": w[1], "topic": w[2], "score": w[4]} for w in related_winners],
+        "related_winners": [{"name": w[0], "framework": w[1], "topic": w[2], "score": w[4], "githubLink": w[6] if len(w) > 6 else None} for w in related_winners],
         "hackathon_name": hackathon_name,
         "hackathon_theme": hackathon_theme
     }
@@ -362,57 +377,101 @@ def find_trends_with_gemini(user_category, user_framework, user_description):
             use_cache = None
     
     prompt = f"""
-You are a hackathon judge. Analyze the database and give DIRECT, CONCISE answers.
+You are a tough but constructive hackathon mentor. Analyze the database and provide a professional, critical analysis.
 
-## USER'S IDEA
-- Category: {user_category}
-- Framework: {user_framework}
-- Description: {user_description}
+## DATABASE CONTEXT
+{stats_summary}
+
+{winners_in_category}
+
+{winners_other}
+
+{participants_data}
+
+## USER'S PROJECT IDEA
+- **Category**: {user_category}
+- **Tech Stack**: {user_framework}
+- **The Pitch**: {user_description}
 
 ---
 
-Format your response EXACTLY like this:
+Format your response EXACTLY like this (use emojis and bullet points, NO TABLES):
 
-## WHAT WINNERS DO
+# 🛠️ WRECK YOUR HACK
 
-| Pattern | Example from Data |
-|---------|------------------|
-| Pattern 1 | "Project X did this..." |
-| Pattern 2 | "Project Y shows..." |
-| Pattern 3 | ... |
-| Pattern 4 | ... |
-| Pattern 5 | ... |
+**Category:** {user_category}  
+**Tech Stack:** {user_framework}  
+**Your Pitch:** {user_description}
 
-## WHAT LOSERS DO
+---
 
-| Mistake | Why It Fails |
-|---------|-------------|
-| Mistake 1 | Brief reason |
-| Mistake 2 | Brief reason |
-| Mistake 3 | Brief reason |
+## 🔍 SIMILAR WINNING PROJECTS
 
-## YOUR IDEA: VERDICT
+List 3-5 winning projects from the database that are most relevant:
+
+- **[Project Name]** (Score: X/10) — One sentence on what made it win
+- **[Project Name]** (Score: X/10) — One sentence on what made it win
+- **[Project Name]** (Score: X/10) — One sentence on what made it win
+
+---
+
+## 🏆 WHAT WINNERS DO
+
+Short, actionable patterns from the database:
+
+- **Solve a specific problem** → "[Project Name] did X" — Do this: [actionable advice]
+- **Use unique data/algorithms** → "[Project Name] used Y" — Do this: [actionable advice]
+- **Clear MVP** → "[Project Name] focused on Z" — Do this: [actionable advice]
+- **Justify their tech** → "[Project Name] chose X because..." — Do this: [actionable advice]
+- **Demo impact** → "[Project Name] showed..." — Do this: [actionable advice]
+
+---
+
+## ⚠️ WHAT LOSERS DO
+
+- **Vague Goals** — No clear metric for judges to evaluate. Fix: Define one measurable outcome.
+- **Over-Ambition** — Half-finished features hurt you. Fix: Cut scope to one polished feature.
+- **No "Why"** — "It's fast" isn't enough. Fix: Explain why {user_framework} is essential for this problem.
+- **Generic Solution** — Nothing unique. Fix: Find your differentiator from the winners above.
+- **Poor Demo** — Backend-heavy with no visual. Fix: Build a simple UI that shows value in 30 seconds.
+
+---
+
+## ⚖️ YOUR VERDICT
 
 **Score: X/10**
 
-### Strengths (What Sets You Apart)
-- Strength 1
-- Strength 2
+### ✅ Strengths
+- [Strength 1 with specific context]
+- [Strength 2 with specific context]
 
-### Gaps (What's Missing vs Winners)
-- Gap 1 - How to fix
-- Gap 2 - How to fix
+### ❌ Gaps (The "Wrecking" Part)
+- **[Gap 1]** — How to fix it in one sentence
+- **[Gap 2]** — How to fix it in one sentence
+- **[Gap 3]** — How to fix it in one sentence
 
-## TOP 3 ACTIONS
+---
 
-1. **Action 1**: One sentence max
-2. **Action 2**: One sentence max
-3. **Action 3**: One sentence max
+## 🚀 TOP 3 ACTIONS (Do This Today)
 
-## YOUR WINNING PITCH
-> Write a 2-sentence pitch they should use based on winner patterns.
+1. **[Action]** — One specific, actionable sentence
+2. **[Action]** — One specific, actionable sentence
+3. **[Action]** — One specific, actionable sentence
 
-Be brutally honest. Reference specific projects from the data. No fluff.
+---
+
+## 🎙️ YOUR WINNING PITCH
+
+> "[One compelling sentence that incorporates your tech stack and unique value]"
+
+---
+
+**CRITICAL INSTRUCTIONS:**
+- Reference SPECIFIC project names from the database — use their actual names
+- Keep every bullet to 1-2 sentences max
+- Be brutally honest about gaps - this is the "wrecking" part
+- Every action must be specific and doable, not generic advice
+- NO TABLES — use bullet points only
 """
     
     config_params = {}

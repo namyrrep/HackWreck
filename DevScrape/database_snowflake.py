@@ -76,12 +76,12 @@ def get_winners_by_category(category, limit=10):
     with get_snowflake_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
+            SELECT name, framework, topic, descriptions, ai_score, ai_reasoning, githubLink 
             FROM HACKS 
-            WHERE LOWER(place) LIKE %s
+            WHERE LOWER(place) LIKE %s AND LOWER(topic) LIKE %s
             ORDER BY ai_score DESC 
             LIMIT %s
-        """, (f'%{category.lower()}%', limit))
+        """, ('%winner%', f'%{category.lower()}%', limit))
         return cursor.fetchall()
 
 
@@ -92,10 +92,10 @@ def get_winners_excluding_category(category, limit=10):
         cursor.execute("""
             SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
             FROM HACKS 
-            WHERE LOWER(place) LIKE '%winner%' AND LOWER(topic) NOT LIKE %s
+            WHERE LOWER(place) LIKE %s AND LOWER(topic) NOT LIKE %s
             ORDER BY ai_score DESC 
             LIMIT %s
-        """, (f'%{category.lower()}%', limit))
+        """, ('%winner%', f'%{category.lower()}%', limit))
         return cursor.fetchall()
 
 
@@ -106,10 +106,10 @@ def get_participants(limit=5):
         cursor.execute("""
             SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
             FROM HACKS 
-            WHERE LOWER(place) NOT LIKE '%winner%'
+            WHERE LOWER(place) NOT LIKE %s
             ORDER BY ai_score DESC 
             LIMIT %s
-        """, (limit,))
+        """, ('%winner%', limit))
         return cursor.fetchall()
 
 
@@ -120,13 +120,13 @@ def get_winners_by_framework(framework, limit=5):
     with get_snowflake_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
+            SELECT name, framework, topic, descriptions, ai_score, ai_reasoning, githubLink 
             FROM HACKS 
-            WHERE LOWER(place) LIKE '%winner%' 
+            WHERE LOWER(place) LIKE %s 
             AND LOWER(framework) LIKE %s
             ORDER BY ai_score DESC 
             LIMIT %s
-        """, (f'%{framework_key.lower()}%', limit))
+        """, ('%winner%', f'%{framework_key.lower()}%', limit))
         return cursor.fetchall()
 
 
@@ -135,12 +135,12 @@ def get_top_winners(limit=5):
     with get_snowflake_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
+            SELECT name, framework, topic, descriptions, ai_score, ai_reasoning, githubLink 
             FROM HACKS 
-            WHERE LOWER(place) LIKE '%winner%'
+            WHERE LOWER(place) LIKE %s
             ORDER BY ai_score DESC 
             LIMIT %s
-        """, (limit,))
+        """, ('%winner%', limit))
         return cursor.fetchall()
 
 
