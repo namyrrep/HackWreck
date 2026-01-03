@@ -1,16 +1,18 @@
-# Force Python provider only
+# Force Python provider
 providers = ["python"]
 
 [phases.setup]
+# python311Full includes everything needed for pip and venv
 nixPkgs = ["python311Full"]
 
 [phases.install]
+# We create the venv explicitly before trying to use it
 cmds = [
-	"/opt/venv/bin/python -m pip --version || true",
-	"/opt/venv/bin/python -m ensurepip --upgrade || true",
-	"/opt/venv/bin/python -m pip install --upgrade pip",
-	"/opt/venv/bin/python -m pip install -r requirements.txt"
+    "python -m venv /opt/venv",
+    "/opt/venv/bin/python -m pip install --upgrade pip",
+    "/opt/venv/bin/python -m pip install -r requirements.txt"
 ]
 
 [start]
-cmd = "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+# Ensure we use the python inside the venv to run the app
+cmd = "/opt/venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
