@@ -10,7 +10,7 @@ const Hero: React.FC = () => {
         </div>
         <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight text-white leading-tight">
           <span className="text-emerald-500">HACKS FOR</span> HACKERS <br />
-          HACK<span className="text-emerald-500 italic">WRECK</span>
+          HACK <span className="text-emerald-500">WRECK</span>
         </h1>
         <p className="max-w-2xl mx-auto text-slate-400 text-lg md:text-xl font-light mb-10">
           HackWreck uses Gemini AI to Wrecommend Hacks for Hackers. 
