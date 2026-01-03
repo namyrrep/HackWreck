@@ -6,11 +6,8 @@ import uvicorn
 import sys
 import os
 
-# Add DevScrape to path so we can import from scrape.py
-sys.path.append(os.path.join(os.path.dirname(__file__), 'DevScrape'))
-from scrape import auto_insert_hack, findTrendswithGemini, analyzeProjectForHackathon
-from database import delete_by_id
-from config import DB_PATH, client, GOOGLE_API_KEY
+# Import from DevScrape package
+from DevScrape import auto_insert_hack, findTrendswithGemini, analyzeProjectForHackathon, delete_by_id, DB_PATH, client, GOOGLE_API_KEY
 
 import sqlite3
 

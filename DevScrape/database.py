@@ -1,6 +1,6 @@
 """Database operations for hackathon projects."""
 import sqlite3
-from config import DB_PATH
+from .config import DB_PATH
 
 
 def check_duplicate_project(github_url):

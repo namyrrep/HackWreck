@@ -1,8 +1,8 @@
 """Gemini AI client for project analysis and trend detection."""
 import json
 from google.genai import types
-from config import client
-from database import (
+from .config import client
+from .database import (
     get_winners_by_framework, 
     get_winners_by_category,
     get_winners_excluding_category, 
