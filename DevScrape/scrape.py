@@ -137,6 +137,44 @@ def auto_insert_hack(github_url, status):
     print(f"Successfully added: {data['name']}")
     return True
 
+def delete_by_id(project_id):
+    """
+    Delete a project from the database by its ID.
+    
+    Args:
+        project_id: The ID of the project to delete
+        
+    Returns:
+        dict: {"success": bool, "message": str, "project_name": str or None}
+    """
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Check if project exists
+    c.execute("SELECT id, name FROM hacks WHERE id = ?", (project_id,))
+    project = c.fetchone()
+    
+    if not project:
+        conn.close()
+        return {
+            "success": False,
+            "message": f"Project with ID {project_id} not found",
+            "project_name": None
+        }
+    
+    project_name = project[1]
+    
+    # Delete the project
+    c.execute("DELETE FROM hacks WHERE id = ?", (project_id,))
+    conn.commit()
+    conn.close()
+    
+    return {
+        "success": True,
+        "message": f"Successfully deleted project '{project_name}' (ID: {project_id})",
+        "project_name": project_name
+    }
+
 def batch_insert_from_file(file_path, default_status=None):
     """
     Batch insert hackathon projects from a text file.
@@ -608,7 +646,8 @@ if __name__ == "__main__":
     print("  1 - Insert a single hackathon project")
     print("  2 - Find trends with Gemini")
     print("  3 - Batch insert from file")
-    print("  4 - Exit")
+    print("  4 - Delete a project by ID")
+    print("  5 - Exit")
     choice = input("Enter your choice: ")
     if choice == '1':
         github_url = input("Enter the GitHub URL of the project: ")
@@ -630,5 +669,12 @@ if __name__ == "__main__":
         file_path = input("Enter the path to your text file: ").strip().strip('"')
         default_status = input("Default status for entries without status (leave blank if all have status): ").strip()
         batch_insert_from_file(file_path, default_status if default_status else None)
-    else:
+    elif choice == '4':
+        project_id = input("Enter the ID of the project to delete: ").strip()
+        if project_id.isdigit():
+            result = delete_by_id(int(project_id))
+            print(result["message"])
+        else:
+            print("Invalid project ID. Please enter a numeric value.")
+    elif choice == '5':
         print("Exiting...")

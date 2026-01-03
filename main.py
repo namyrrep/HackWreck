@@ -8,7 +8,7 @@ import os
 
 # Add DevScrape to path so we can import from scrape.py
 sys.path.append(os.path.join(os.path.dirname(__file__), 'DevScrape'))
-from scrape import auto_insert_hack, findTrendswithGemini, analyzeProjectForHackathon, DB_PATH, client, GOOGLE_API_KEY
+from scrape import auto_insert_hack, findTrendswithGemini, analyzeProjectForHackathon, delete_by_id, DB_PATH, client, GOOGLE_API_KEY
 
 import sqlite3
 
@@ -257,6 +257,19 @@ async def get_stats():
         "top_frameworks": top_frameworks,
         "top_categories": top_categories
     }
+
+
+@app.delete("/api/projects/{project_id}")
+async def delete_project(project_id: int):
+    """
+    Delete a project by ID from the database.
+    """
+    result = delete_by_id(project_id)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=404, detail=result["message"])
+    
+    return result
 
 
 if __name__ == "__main__":
