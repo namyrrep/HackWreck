@@ -15,7 +15,8 @@ def init_db():
             topic TEXT,         -- Gemini-generated Category
             descriptions TEXT,
             tableNumber INTEGER,
-            ai_score FLOAT      -- Added: Let Gemini rate the 'Winning Potential'
+            ai_score FLOAT,     -- Gemini's rating of 'Winning Potential' (0.0-10.0)
+            ai_reasoning TEXT   -- Gemini's explanation for the ai_score
         )
     ''')
     conn.commit()
