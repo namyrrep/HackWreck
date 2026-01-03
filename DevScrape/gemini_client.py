@@ -330,7 +330,16 @@ def find_trends_with_gemini(user_category, user_framework, user_description):
         table = f"### {title}\n"
         table += "| Name | Framework | Category | Score | Description | Reasoning |\n"
         table += "|------|-----------|----------|-------|-------------|----------|\n"
-        for name, framework, topic, desc, score, reasoning in projects:
+        for row in projects:
+            # Different DB backends / queries may include extra columns (e.g., githubLink).
+            # Be tolerant and only use the first 6 fields we need.
+            row = list(row) if row is not None else []
+            name = row[0] if len(row) > 0 else "N/A"
+            framework = row[1] if len(row) > 1 else "N/A"
+            topic = row[2] if len(row) > 2 else "N/A"
+            desc = row[3] if len(row) > 3 else None
+            score = row[4] if len(row) > 4 else None
+            reasoning = row[5] if len(row) > 5 else None
             # Truncate long fields
             desc_short = (desc[:80] + "...") if desc and len(desc) > 80 else (desc or "N/A")
             reasoning_short = (reasoning[:60] + "...") if reasoning and len(reasoning) > 60 else (reasoning or "N/A")

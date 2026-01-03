@@ -2,11 +2,17 @@
 
 AI-powered hackathon project analyzer. Uses Google Gemini to evaluate GitHub repos, identify winning trends, and provide strategic recommendations.
 
+## Live Deployments
+
+- **Backend (Railway):** https://hackwreck-production.up.railway.app
+	- Health: https://hackwreck-production.up.railway.app/
+	- Docs: https://hackwreck-production.up.railway.app/docs
+
 ## Quick Start
 
 ### Backend
 ```bash
-pip install google-genai python-dotenv fastapi uvicorn snowflake-connector-python
+pip install -r requirements.txt
 ```
 
 ### Frontend
@@ -16,26 +22,60 @@ npm install
 ```
 
 ### Environment Variables
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (used by the backend):
 ```env
 GOOGLE_API_KEY=your_api_key
+
+# Optional (recommended): enable Snowflake instead of local SQLite
+USE_SNOWFLAKE=true
+
 SNOWFLAKE_USER=your_user
 SNOWFLAKE_PASSWORD="your_password"
 SNOWFLAKE_ACCOUNT=your_account
 SNOWFLAKE_WAREHOUSE=COMPUTE_WH
 SNOWFLAKE_DATABASE=your_database
 SNOWFLAKE_SCHEMA=your_schema
+
+# Production CORS (comma-separated). Example:
+# CORS_ORIGINS=https://hack-wreck-ecru.vercel.app
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
 ### Run
 ```bash
 # Start API server
-python main.py
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Start frontend (in another terminal)
 cd hackwreck-front-end
 npm run dev
 ```
+
+## Deploy
+
+### Backend on Railway
+
+- Deployed from repo root using Nixpacks (`nixpacks.toml`).
+- Railway should expose the service (Public Networking) on:
+	- https://hackwreck-production.up.railway.app
+
+**Required Railway Variables**
+- `GOOGLE_API_KEY`
+- `USE_SNOWFLAKE` (set to `true` if using Snowflake)
+- Snowflake variables (`SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_WAREHOUSE`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_SCHEMA`)
+- `CORS_ORIGINS` set to your Vercel site origin (exact match), e.g.
+	- `CORS_ORIGINS=https://hack-wreck-ecru.vercel.app`
+
+### Frontend on Vercel
+
+- Set the Vercel **Root Directory** to `hackwreck-front-end`.
+- Build command: `npm run build`
+- Output directory: `dist`
+
+**Required Vercel Env Vars**
+- `VITE_API_URL` = `https://hackwreck-production.up.railway.app`
+
+If a friend can't access the Vercel link and it redirects to a Vercel SSO page, disable any deployment protection/authentication so the site is public.
 
 ## Features
 
