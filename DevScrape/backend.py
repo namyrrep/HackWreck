@@ -16,7 +16,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from DevScrape.validators import validate_github_url
 from DevScrape.db import check_duplicate_project, insert_project, delete_by_id
-from DevScrape.gemini_client import analyze_github_project, analyze_project_for_hackathon, find_trends_with_gemini
+from DevScrape.gemini_client import (
+    analyze_github_project,
+    analyze_project_for_hackathon,
+    find_trends_with_gemini,
+    generate_wreck_me_pitch,
+)
 from DevScrape.config import DB_PATH, GOOGLE_API_KEY, client
 
 
@@ -163,6 +168,11 @@ def findTrendswithGemini(user_category, user_framework, user_description):
         str: Formatted trend analysis and advice
     """
     return find_trends_with_gemini(user_category, user_framework, user_description)
+
+
+def wreckMeWithGemini() -> str:
+    """Generate a random, markdown-formatted hackathon pitch."""
+    return generate_wreck_me_pitch()
 
 
 if __name__ == "__main__":

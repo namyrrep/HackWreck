@@ -10,6 +10,7 @@ import os
 from DevScrape import (
     auto_insert_hack, 
     findTrendswithGemini, 
+    wreckMeWithGemini,
     analyzeProjectForHackathon, 
     delete_by_id, 
     client, 
@@ -124,6 +125,11 @@ class TrendResponse(BaseModel):
     analysis: str
 
 
+class WreckMeResponse(BaseModel):
+    success: bool
+    analysis: str
+
+
 class ProjectAnalysisRequest(BaseModel):
     github_url: str
     hackathon_name: str
@@ -192,6 +198,16 @@ async def get_trends(request: TrendRequest):
             request.description
         )
         return TrendResponse(success=True, analysis=analysis)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/wreck-me", response_model=WreckMeResponse)
+async def wreck_me():
+    """Generate a random, polished hackathon idea pitch (Markdown) via Gemini."""
+    try:
+        analysis = wreckMeWithGemini()
+        return WreckMeResponse(success=True, analysis=analysis)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

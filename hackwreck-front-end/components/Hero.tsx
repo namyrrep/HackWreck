@@ -16,9 +16,16 @@ const Hero: React.FC = () => {
           HackWreck uses Gemini AI to Wrecommend Hacks for Hackers. 
         </p>
         <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-          <a href="#trends" className="w-full sm:w-auto px-8 py-3 bg-white text-slate-950 font-bold rounded-lg hover:bg-slate-200 transition-all uppercase text-sm">
-            WRECK HACK
-          </a>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.hash = '#wreck';
+              window.dispatchEvent(new Event('wreckme'));
+            }}
+            className="w-full sm:w-auto px-8 py-3 bg-white text-slate-950 font-bold rounded-lg hover:bg-slate-200 transition-all text-sm"
+          >
+            Wreck Me
+          </button>
         </div>
       </div>
       

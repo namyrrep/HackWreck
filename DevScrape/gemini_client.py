@@ -1,5 +1,6 @@
 """Gemini AI client for project analysis and trend detection."""
 import json
+import secrets
 from google.genai import types
 
 # Try to import caching - it may not be available in all versions
@@ -19,6 +20,109 @@ from .db import (
     get_top_winners,
     get_database_stats
 )
+
+
+def generate_wreck_me_pitch() -> str:
+    """Generate a random, high-quality hackathon idea pitch (Markdown).
+
+    Uses aggregate stats + top winners as inspiration, then asks Gemini to
+    synthesize an original idea that borrows the *patterns* of winners.
+    """
+
+    stats = get_database_stats()
+    top_winners = get_top_winners(limit=12)
+
+    top_frameworks = [fw for fw, _cnt in (stats.get("top_frameworks") or [])]
+    top_categories = [cat for cat, _cnt in (stats.get("top_categories") or [])]
+
+    challenge_modifiers = [
+        "No user accounts; demo works instantly",
+        "Must work with unreliable network",
+        "Privacy-first: do not store raw PII",
+        "Offline-first mobile experience",
+        "Requires a real-time component",
+        "Uses a novel data source",
+        "Includes an on-device / edge element",
+        "Two-sided marketplace UX",
+    ]
+
+    chosen_frameworks = ", ".join(secrets.choice(top_frameworks) for _ in range(min(2, len(top_frameworks)))) if top_frameworks else "React + Python"
+    chosen_category = secrets.choice(top_categories) if top_categories else "AI"
+    chosen_modifier = secrets.choice(challenge_modifiers)
+
+    winners_bullets = ""
+    for row in top_winners:
+        row = list(row) if row is not None else []
+        name = row[0] if len(row) > 0 else "N/A"
+        framework = row[1] if len(row) > 1 else "N/A"
+        topic = row[2] if len(row) > 2 else "N/A"
+        desc = row[3] if len(row) > 3 else ""
+        score = row[4] if len(row) > 4 else "?"
+        winners_bullets += f"- **{name}** ({topic}) — {framework} — {score}/10 — {desc}\n"
+
+    prompt = f"""
+You are an elite hackathon pitch writer and product strategist.
+
+Your job: generate ONE fresh hackathon project idea that is a *10/10 pitch*.
+
+Constraints:
+- The idea must be ORIGINAL (do not copy any project below).
+- It should *combine the best parts* of winning patterns: clear user story, strong demo, unique differentiator, tight scope.
+- Make it a GOOD CHALLENGE: ambitious but shippable in 24-48 hours.
+- Output MUST be beautifully formatted Markdown.
+
+Inspiration (top winners from our database):
+{winners_bullets}
+
+Use these as your default direction:
+- Target category: **{chosen_category}**
+- Suggested stack: **{chosen_frameworks}**
+- Challenge modifier: **{chosen_modifier}**
+
+Return EXACTLY this structure (Markdown only):
+
+# Wreck Me
+
+## Project Name
+
+## One-line Hook
+
+## The Problem (pain + stakes)
+
+## The Solution (what the demo shows)
+
+## Why This Wins (judge-facing)
+- 5 bullets max
+
+## Secret Sauce (the differentiator)
+
+## Tech Stack
+- bullets
+
+## Demo Script (90 seconds)
+1. ...
+
+## MVP Checklist (ship in 6 hours)
+- bullets
+
+## Stretch Goals (if time)
+- bullets
+
+## Scoring Map
+- **Impact**: ...
+- **Technical difficulty**: ...
+- **Design / UX**: ...
+- **Novelty**: ...
+
+Keep it sharp, vivid, and practical. No fluff.
+"""
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+
+    return response.text
 
 
 def parse_json_response(response_text):

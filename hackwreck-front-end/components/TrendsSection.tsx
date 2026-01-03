@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
@@ -12,11 +12,50 @@ const TrendsSection: React.FC = () => {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const generateWreckMe = async () => {
+    setIsAnalyzing(true);
+    setError(null);
+    setAnalysis(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/wreck-me`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Wreck Me generation failed');
+      }
+
+      const data = await response.json();
+      setAnalysis(data.analysis);
+    } catch (err: any) {
+      setError(`ERROR: ${err.message}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => {
+      void generateWreckMe();
+    };
+    window.addEventListener('wreckme', handler);
+    return () => window.removeEventListener('wreckme', handler);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!category || !framework || !description) {
-      setError('All fields are required');
+
+    const hasAny = !!category || !!framework || !!description;
+    const hasAll = !!category && !!framework && !!description;
+    if (!hasAny) {
+      await generateWreckMe();
+      return;
+    }
+    if (!hasAll) {
+      setError('Fill all fields, or leave all blank for Wreck Me');
       return;
     }
 
@@ -45,17 +84,19 @@ const TrendsSection: React.FC = () => {
     }
   };
 
-  const isFormValid = category && framework && description;
+  const hasAny = !!category || !!framework || !!description;
+  const hasAll = !!category && !!framework && !!description;
+  const canSubmit = !isAnalyzing && (!hasAny || hasAll);
 
   return (
     <div className="bg-slate-900/50 hacker-border rounded-xl p-6 md:p-10 hacker-glow">
       <div className="flex items-center space-x-3 mb-8">
         <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-        <h2 className="text-2xl font-bold font-mono text-emerald-500 uppercase tracking-tight">WRECK YOUR HACK</h2>
+        <h2 className="text-2xl font-bold font-mono text-emerald-500 tracking-tight">Wreck Me</h2>
       </div>
 
       <p className="text-slate-400 text-sm font-mono mb-6">
-        Plan your next hackathon project. Describe your idea and get AI-powered recommendations based on winning trends from our database.
+        Leave everything blank and hit Wreck Me for a random 10/10 markdown pitch. Or fill all fields to get trend-based feedback on your idea.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -99,8 +140,8 @@ const TrendsSection: React.FC = () => {
 
         <button 
           type="submit"
-          disabled={isAnalyzing || !isFormValid}
-          className={`w-full md:w-auto px-10 py-3 rounded-lg font-black font-mono flex items-center justify-center space-x-2 transition-all ${isAnalyzing || !isFormValid ? 'bg-slate-800 cursor-not-allowed text-slate-600' : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20'}`}
+          disabled={!canSubmit}
+          className={`w-full md:w-auto px-10 py-3 rounded-lg font-black font-mono flex items-center justify-center space-x-2 transition-all ${!canSubmit ? 'bg-slate-800 cursor-not-allowed text-slate-600' : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20'}`}
         >
           {isAnalyzing ? (
             <>
@@ -108,10 +149,10 @@ const TrendsSection: React.FC = () => {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span className="uppercase">ANALYZING TRENDS...</span>
+              <span className="uppercase">GENERATING...</span>
             </>
           ) : (
-            <span className="uppercase">WRECK IT</span>
+            <span>Wreck Me</span>
           )}
         </button>
 
