@@ -2,13 +2,14 @@
 providers = ["python"]
 
 [phases.setup]
-nixPkgs = ["python311"]
+nixPkgs = ["python311Full"]
 
 [phases.install]
 cmds = [
-	"python -m ensurepip --upgrade",
-	"python -m pip install --upgrade pip",
-	"python -m pip install -r requirements.txt"
+	"/opt/venv/bin/python -m pip --version || true",
+	"/opt/venv/bin/python -m ensurepip --upgrade || true",
+	"/opt/venv/bin/python -m pip install --upgrade pip",
+	"/opt/venv/bin/python -m pip install -r requirements.txt"
 ]
 
 [start]
