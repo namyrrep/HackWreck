@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -126,10 +127,20 @@ const TrendsSection: React.FC = () => {
           <div className="flex items-center space-x-2 mb-4">
             <h3 className="text-lg font-bold font-mono text-emerald-500 uppercase">AI ANALYSIS</h3>
           </div>
-          <div className="prose prose-invert prose-emerald max-w-none">
-            <div className="text-slate-300 font-mono text-sm leading-relaxed whitespace-pre-wrap">
+          <div className="prose prose-invert prose-emerald max-w-none text-slate-300 font-mono text-sm leading-relaxed">
+            <ReactMarkdown 
+              components={{
+                a: ({ node, ...props }) => <a {...props} className="text-emerald-400 hover:text-emerald-300 underline" target="_blank" rel="noopener noreferrer" />,
+                h2: ({ node, ...props }) => <h2 {...props} className="text-emerald-500 font-bold text-base mt-4 mb-2" />,
+                h3: ({ node, ...props }) => <h3 {...props} className="text-slate-300 font-bold text-sm mt-3 mb-2" />,
+                p: ({ node, ...props }) => <p {...props} className="mb-2" />,
+                ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside mb-2" />,
+                li: ({ node, ...props }) => <li {...props} className="mb-1" />,
+                strong: ({ node, ...props }) => <strong {...props} className="text-white font-bold" />,
+              }}
+            >
               {analysis}
-            </div>
+            </ReactMarkdown>
           </div>
         </div>
       )}
