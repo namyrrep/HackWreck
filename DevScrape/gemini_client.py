@@ -1,7 +1,15 @@
 """Gemini AI client for project analysis and trend detection."""
 import json
 from google.genai import types
-from google.genai import caching
+
+# Try to import caching - it may not be available in all versions
+try:
+    from google.genai import caching
+    CACHING_AVAILABLE = True
+except ImportError:
+    CACHING_AVAILABLE = False
+    print("Warning: Context caching not available in this version of google-genai")
+
 from .config import client
 from .database import (
     get_winners_by_framework, 
@@ -161,7 +169,9 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
     frameworks_text = "\n".join([f"- {fw}: {cnt} wins" for fw, cnt in top_frameworks]) if top_frameworks else "No data"
     
     # Cache expensive context for reuse (winning projects data)
-    context_content = f"""## WINNING PROJECTS WITH SIMILAR FRAMEWORK OR CATEGORY
+    use_cache = None
+    if CACHING_AVAILABLE:
+        context_content = f"""## WINNING PROJECTS WITH SIMILAR FRAMEWORK OR CATEGORY
 {related_winners_text}
 
 ## TOP WINNING PROJECTS OVERALL
@@ -169,17 +179,17 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
 
 ## MOST SUCCESSFUL FRAMEWORKS
 {frameworks_text}"""
-    
-    try:
-        cached_content = caching.CachedContent.create(
-            model='gemini-2.5-flash',
-            contents=[context_content],
-            ttl="1800s"  # 30 minutes
-        )
-        use_cache = cached_content.name
-    except Exception as e:
-        print(f"Caching not available: {e}")
-        use_cache = None
+        
+        try:
+            cached_content = caching.CachedContent.create(
+                model='gemini-2.5-flash',
+                contents=[context_content],
+                ttl="1800s"  # 30 minutes
+            )
+            use_cache = cached_content.name
+        except Exception as e:
+            print(f"Caching error: {e}")
+            use_cache = None
     
     # Generate improvement suggestions
     suggestions_prompt = f"""
@@ -330,26 +340,26 @@ def find_trends_with_gemini(user_category, user_framework, user_description):
 ### Top Winning Categories
 {chr(10).join([f"- {cat}: {cnt} wins" for cat, cnt in stats['top_categories']]) if stats['top_categories'] else "No data yet"}
 """
-    
-    # Cache expensive database context for reuse
-    context_content = f"""{stats_summary}
+    use_cache = None
+    if CACHING_AVAILABLE:
+        context_content = f"""{stats_summary}
 
 {winners_in_category}
 
 {winners_other}
 
 {participants_data}"""
-    
-    try:
-        cached_content = caching.CachedContent.create(
-            model='gemini-2.5-flash',
-            contents=[context_content],
-            ttl="1800s"  # 30 minutes
-        )
-        use_cache = cached_content.name
-    except Exception as e:
-        print(f"Caching not available: {e}")
-        use_cache = None
+        
+        try:
+            cached_content = caching.CachedContent.create(
+                model='gemini-2.5-flash',
+                contents=[context_content],
+                ttl="1800s"  # 30 minutes
+            )
+            use_cache = cached_content.name
+        except Exception as e:
+            print(f"Caching error: {e}")
+            use_cache = None
     
     prompt = f"""
 You are a hackathon judge. Analyze the database and give DIRECT, CONCISE answers.
