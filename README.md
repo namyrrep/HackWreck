@@ -13,12 +13,18 @@ cd HackWreck
 ```
 
 ### 2. Install Python Dependencies
-The backend requires Python 3.x and several libraries for AI integration and environment management.
+The backend requires Python 3.x and several libraries for AI integration and database connectivity.
 ```bash
-pip install google-genai python-dotenv flask flask-cors
+pip install google-genai python-dotenv fastapi uvicorn snowflake-connector-python
 ```
 
-### 3. Configure Environment Variables
+### 3. Install Frontend Dependencies
+Navigate to the frontend folder and install React dependencies.
+```bash
+cd hackwreck-front-end
+npm install
+npm install react-markdown remark-gfm
+```
 Create a `.env` file in the `DevScrape/` directory to store your API credentials.
 ```env
 GOOGLE_API_KEY=your_google_api_key_here
@@ -180,20 +186,43 @@ https://github.com/user/repo2
 ```
 HackWreck/
 ├── README.md
+├── main.py                 # FastAPI backend server
+├── .env                    # API keys & Snowflake config (not committed)
 ├── DevScrape/
-│   ├── scrape.py       # Main script with all functions
-│   ├── devWeb.py       # Database initialization
-│   ├── hackathons.db   # SQLite database (created on first run)
-│   └── .env            # API keys (not committed)
+│   ├── backend.py          # CLI interface and main functions
+│   ├── config.py           # Configuration and environment loading
+│   ├── database_snowflake.py # Snowflake database operations
+│   ├── db.py               # Database abstraction layer
+│   ├── gemini_client.py    # Gemini AI integration
+│   ├── validators.py       # URL validation
+│   └── __init__.py         # Package exports
+└── hackwreck-front-end/
+    ├── App.tsx             # Main React application
+    ├── index.html
+    ├── package.json
+    └── components/         # React components
 ```
 
 ## Dependencies
 
+### Backend (Python)
 | Package | Purpose |
 |---------|---------|
 | `google-genai` | Google Gemini AI API client |
 | `python-dotenv` | Load environment variables from .env |
-| `sqlite3` | Database (built into Python) |
+| `fastapi` | Modern async web framework |
+| `uvicorn` | ASGI server for FastAPI |
+| `snowflake-connector-python` | Snowflake database connectivity |
+
+### Frontend (React)
+| Package | Purpose |
+|---------|---------|
+| `react` | UI framework |
+| `react-dom` | React DOM rendering |
+| `react-markdown` | Render markdown content |
+| `remark-gfm` | GitHub Flavored Markdown support |
+| `vite` | Build tool and dev server |
+| `typescript` | Type safety |
 
 ## Database Schema
 
