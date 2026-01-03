@@ -7,9 +7,16 @@ import sys
 import os
 
 # Import from DevScrape package
-from DevScrape import auto_insert_hack, findTrendswithGemini, analyzeProjectForHackathon, delete_by_id, DB_PATH, client, GOOGLE_API_KEY
-
-import sqlite3
+from DevScrape import (
+    auto_insert_hack, 
+    findTrendswithGemini, 
+    analyzeProjectForHackathon, 
+    delete_by_id, 
+    client, 
+    GOOGLE_API_KEY,
+    get_database_stats,
+    get_snowflake_connection
+)
 
 
 @asynccontextmanager
@@ -20,16 +27,15 @@ async def lifespan(app: FastAPI):
     print("HackWreck API Starting...")
     print("="*50)
     
-    # Check 1: Database
+    # Check 1: Snowflake Database
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM hacks")
-        count = c.fetchone()[0]
-        conn.close()
-        print(f"[OK] Database: Connected ({count} projects)")
+        with get_snowflake_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM HACKS")
+            count = cursor.fetchone()[0]
+        print(f"[OK] Snowflake Database: Connected ({count} projects)")
     except Exception as e:
-        print(f"[ERROR] Database: {e}")
+        print(f"[ERROR] Snowflake Database: {e}")
     
     # Check 2: API Key
     if GOOGLE_API_KEY:
@@ -198,14 +204,13 @@ async def get_all_projects():
     """
     Get all projects from the database.
     """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute("SELECT id, name, framework, githubLink, place, topic, descriptions, ai_score, ai_reasoning FROM hacks")
-    rows = c.fetchall()
-    conn.close()
+    with get_snowflake_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, framework, githubLink, place, topic, descriptions, ai_score, ai_reasoning FROM HACKS")
+        rows = cursor.fetchall()
     
-    return [ProjectResponse(**dict(row)) for row in rows]
+    columns = ['id', 'name', 'framework', 'githubLink', 'place', 'topic', 'descriptions', 'ai_score', 'ai_reasoning']
+    return [ProjectResponse(**dict(zip(columns, row))) for row in rows]
 
 
 @app.get("/api/projects/winners", response_model=list[ProjectResponse])
@@ -213,14 +218,13 @@ async def get_winners():
     """
     Get all winning projects from the database.
     """
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute("SELECT id, name, framework, githubLink, place, topic, descriptions, ai_score, ai_reasoning FROM hacks WHERE LOWER(place) LIKE '%winner%'")
-    rows = c.fetchall()
-    conn.close()
+    with get_snowflake_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, framework, githubLink, place, topic, descriptions, ai_score, ai_reasoning FROM HACKS WHERE LOWER(place) LIKE '%winner%'")
+        rows = cursor.fetchall()
     
-    return [ProjectResponse(**dict(row)) for row in rows]
+    columns = ['id', 'name', 'framework', 'githubLink', 'place', 'topic', 'descriptions', 'ai_score', 'ai_reasoning']
+    return [ProjectResponse(**dict(zip(columns, row))) for row in rows]
 
 
 @app.get("/api/stats")
@@ -228,33 +232,15 @@ async def get_stats():
     """
     Get database statistics.
     """
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    c.execute("SELECT COUNT(*) FROM hacks")
-    total = c.fetchone()[0]
-    
-    c.execute("SELECT COUNT(*) FROM hacks WHERE LOWER(place) LIKE '%winner%'")
-    winners = c.fetchone()[0]
-    
-    c.execute("SELECT AVG(ai_score) FROM hacks WHERE LOWER(place) LIKE '%winner%'")
-    avg_winner_score = c.fetchone()[0] or 0
-    
-    c.execute("SELECT framework, COUNT(*) as cnt FROM hacks WHERE LOWER(place) LIKE '%winner%' GROUP BY framework ORDER BY cnt DESC LIMIT 5")
-    top_frameworks = [{"framework": fw, "count": cnt} for fw, cnt in c.fetchall()]
-    
-    c.execute("SELECT topic, COUNT(*) as cnt FROM hacks WHERE LOWER(place) LIKE '%winner%' GROUP BY topic ORDER BY cnt DESC LIMIT 5")
-    top_categories = [{"category": cat, "count": cnt} for cat, cnt in c.fetchall()]
-    
-    conn.close()
+    stats = get_database_stats()
     
     return {
-        "total_projects": total,
-        "total_winners": winners,
-        "total_participants": total - winners,
-        "avg_winner_score": round(avg_winner_score, 1),
-        "top_frameworks": top_frameworks,
-        "top_categories": top_categories
+        "total_projects": stats["total_projects"],
+        "total_winners": stats["total_winners"],
+        "total_participants": stats["total_projects"] - stats["total_winners"],
+        "avg_winner_score": round(stats["avg_winner_score"], 1),
+        "top_frameworks": [{"framework": fw, "count": cnt} for fw, cnt in stats["top_frameworks"]],
+        "top_categories": [{"category": cat, "count": cnt} for cat, cnt in stats["top_categories"]]
     }
 
 

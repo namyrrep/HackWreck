@@ -1,20 +1,8 @@
 """Snowflake database operations for hackathon projects."""
 import snowflake.connector
 from contextlib import contextmanager
-import os
-from dotenv import load_dotenv
+from .config import SNOWFLAKE_CONFIG
 
-load_dotenv()
-
-# Snowflake connection parameters
-SNOWFLAKE_CONFIG = {
-    'user': os.getenv('SNOWFLAKE_USER'),
-    'password': os.getenv('SNOWFLAKE_PASSWORD'),
-    'account': os.getenv('SNOWFLAKE_ACCOUNT'),
-    'warehouse': os.getenv('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH'),
-    'database': os.getenv('SNOWFLAKE_DATABASE', 'hackwreck'),
-    'schema': os.getenv('SNOWFLAKE_SCHEMA', 'projects')
-}
 
 @contextmanager
 def get_snowflake_connection():
@@ -30,7 +18,7 @@ def check_duplicate_project(github_url):
     """Check if a project with the given GitHub URL already exists."""
     with get_snowflake_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM hacks WHERE githubLink = %s", (github_url,))
+        cursor.execute("SELECT id, name FROM HACKS WHERE githubLink = %s", (github_url,))
         existing = cursor.fetchone()
         
         if existing:
@@ -44,7 +32,7 @@ def insert_project(name, framework, github_url, status, topic, descriptions, ai_
         with get_snowflake_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO hacks (name, framework, githubLink, place, topic, descriptions, ai_score, ai_reasoning)
+                INSERT INTO HACKS (name, framework, githubLink, place, topic, descriptions, ai_score, ai_reasoning)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', (name, framework, github_url, status, topic, descriptions, ai_score, ai_reasoning))
             conn.commit()
@@ -60,7 +48,7 @@ def delete_by_id(project_id):
         cursor = conn.cursor()
         
         # Check if project exists
-        cursor.execute("SELECT id, name FROM hacks WHERE id = %s", (project_id,))
+        cursor.execute("SELECT id, name FROM HACKS WHERE id = %s", (project_id,))
         project = cursor.fetchone()
         
         if not project:
@@ -73,7 +61,7 @@ def delete_by_id(project_id):
         project_name = project[1]
         
         # Delete the project
-        cursor.execute("DELETE FROM hacks WHERE id = %s", (project_id,))
+        cursor.execute("DELETE FROM HACKS WHERE id = %s", (project_id,))
         conn.commit()
         
         return {
@@ -89,7 +77,7 @@ def get_winners_by_category(category, limit=10):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
-            FROM hacks 
+            FROM HACKS 
             WHERE LOWER(place) LIKE %s
             ORDER BY ai_score DESC 
             LIMIT %s
@@ -103,7 +91,7 @@ def get_winners_excluding_category(category, limit=10):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
-            FROM hacks 
+            FROM HACKS 
             WHERE LOWER(place) LIKE '%winner%' AND LOWER(topic) NOT LIKE %s
             ORDER BY ai_score DESC 
             LIMIT %s
@@ -117,7 +105,7 @@ def get_participants(limit=5):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
-            FROM hacks 
+            FROM HACKS 
             WHERE LOWER(place) NOT LIKE '%winner%'
             ORDER BY ai_score DESC 
             LIMIT %s
@@ -133,7 +121,7 @@ def get_winners_by_framework(framework, limit=5):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
-            FROM hacks 
+            FROM HACKS 
             WHERE LOWER(place) LIKE '%winner%' 
             AND LOWER(framework) LIKE %s
             ORDER BY ai_score DESC 
@@ -148,7 +136,7 @@ def get_top_winners(limit=5):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT name, framework, topic, descriptions, ai_score, ai_reasoning 
-            FROM hacks 
+            FROM HACKS 
             WHERE LOWER(place) LIKE '%winner%'
             ORDER BY ai_score DESC 
             LIMIT %s
@@ -161,15 +149,15 @@ def get_database_stats():
     with get_snowflake_connection() as conn:
         cursor = conn.cursor()
         
-        cursor.execute("SELECT COUNT(*) FROM hacks WHERE LOWER(place) LIKE '%winner%'")
+        cursor.execute("SELECT COUNT(*) FROM HACKS WHERE LOWER(place) LIKE '%winner%'")
         total_winners = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) FROM hacks")
+        cursor.execute("SELECT COUNT(*) FROM HACKS")
         total_projects = cursor.fetchone()[0]
         
         cursor.execute("""
             SELECT framework, COUNT(*) as cnt 
-            FROM hacks 
+            FROM HACKS 
             WHERE LOWER(place) LIKE '%winner%' 
             GROUP BY framework 
             ORDER BY cnt DESC 
@@ -179,7 +167,7 @@ def get_database_stats():
         
         cursor.execute("""
             SELECT topic, COUNT(*) as cnt 
-            FROM hacks 
+            FROM HACKS 
             WHERE LOWER(place) LIKE '%winner%' 
             GROUP BY topic 
             ORDER BY cnt DESC 
@@ -187,7 +175,7 @@ def get_database_stats():
         """)
         top_categories = cursor.fetchall()
         
-        cursor.execute("SELECT AVG(ai_score) FROM hacks WHERE LOWER(place) LIKE '%winner%'")
+        cursor.execute("SELECT AVG(ai_score) FROM HACKS WHERE LOWER(place) LIKE '%winner%'")
         avg_winner_score = cursor.fetchone()[0] or 0
         
         return {

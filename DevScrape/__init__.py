@@ -1,7 +1,8 @@
 """DevScrape - Hackathon project analyzer and database manager."""
 from .config import DB_PATH, GOOGLE_API_KEY, client
 from .backend import auto_insert_hack, findTrendswithGemini, analyzeProjectForHackathon
-from .database import delete_by_id
+from .db import delete_by_id, get_database_stats
+from .database_snowflake import get_snowflake_connection
 
 __all__ = [
     'DB_PATH',
@@ -10,5 +11,7 @@ __all__ = [
     'auto_insert_hack',
     'findTrendswithGemini',
     'analyzeProjectForHackathon',
-    'delete_by_id'
+    'delete_by_id',
+    'get_database_stats',
+    'get_snowflake_connection'
 ]

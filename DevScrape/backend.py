@@ -15,7 +15,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from DevScrape.validators import validate_github_url
-from DevScrape.database import check_duplicate_project, insert_project, delete_by_id
+from DevScrape.db import check_duplicate_project, insert_project, delete_by_id
 from DevScrape.gemini_client import analyze_github_project, analyze_project_for_hackathon, find_trends_with_gemini
 from DevScrape.config import DB_PATH, GOOGLE_API_KEY, client
 

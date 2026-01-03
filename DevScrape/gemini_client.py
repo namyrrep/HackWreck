@@ -11,7 +11,7 @@ except ImportError:
     print("Warning: Context caching not available in this version of google-genai")
 
 from .config import client
-from .database import (
+from .db import (
     get_winners_by_framework, 
     get_winners_by_category,
     get_winners_excluding_category, 
