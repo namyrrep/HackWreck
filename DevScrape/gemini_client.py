@@ -1,6 +1,7 @@
 """Gemini AI client for project analysis and trend detection."""
 import json
 from google.genai import types
+from google.genai import caching
 from .config import client
 from .database import (
     get_winners_by_framework, 
@@ -159,6 +160,27 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
     top_winners_text = format_winners(top_winners)
     frameworks_text = "\n".join([f"- {fw}: {cnt} wins" for fw, cnt in top_frameworks]) if top_frameworks else "No data"
     
+    # Cache expensive context for reuse (winning projects data)
+    context_content = f"""## WINNING PROJECTS WITH SIMILAR FRAMEWORK OR CATEGORY
+{related_winners_text}
+
+## TOP WINNING PROJECTS OVERALL
+{top_winners_text}
+
+## MOST SUCCESSFUL FRAMEWORKS
+{frameworks_text}"""
+    
+    try:
+        cached_content = caching.CachedContent.create(
+            model='gemini-2.5-flash',
+            contents=[context_content],
+            ttl="1800s"  # 30 minutes
+        )
+        use_cache = cached_content.name
+    except Exception as e:
+        print(f"Caching not available: {e}")
+        use_cache = None
+    
     # Generate improvement suggestions
     suggestions_prompt = f"""
     You are a hackathon coach. A developer wants to enter their project into a hackathon and needs advice on how to improve it to maximize their chances of winning.
@@ -175,15 +197,6 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
     - **Current Score**: {project_data.get('current_score', 'N/A')}/10
     - **Strengths**: {', '.join(project_data.get('strengths', []))}
     - **Weaknesses**: {', '.join(project_data.get('weaknesses', []))}
-
-    ## WINNING PROJECTS WITH SIMILAR FRAMEWORK OR CATEGORY
-    {related_winners_text}
-
-    ## TOP WINNING PROJECTS OVERALL
-    {top_winners_text}
-
-    ## MOST SUCCESSFUL FRAMEWORKS
-    {frameworks_text}
 
     ---
 
@@ -239,12 +252,16 @@ def analyze_project_for_hackathon(github_url, hackathon_name, hackathon_theme=""
     CRITICAL: Keep tasks to 5-7 words max. Use real URLs. No fluff.
     """
     
+    config_params = {
+        "tools": [{"google_search": {}}]
+    }
+    if use_cache:
+        config_params["cached_content"] = use_cache
+    
     suggestions_response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=suggestions_prompt,
-        config=types.GenerateContentConfig(
-            tools=[{"google_search": {}}]  # Enable web search for resources
-        )
+        config=types.GenerateContentConfig(**config_params)
     )
     
     return {
@@ -314,20 +331,28 @@ def find_trends_with_gemini(user_category, user_framework, user_description):
 {chr(10).join([f"- {cat}: {cnt} wins" for cat, cnt in stats['top_categories']]) if stats['top_categories'] else "No data yet"}
 """
     
-    prompt = f"""
-You are a hackathon judge. Analyze the database and give DIRECT, CONCISE answers.
+    # Cache expensive database context for reuse
+    context_content = f"""{stats_summary}
 
-## DATABASE STATS
-{stats_summary}
-
-## WINNERS IN '{user_category}' CATEGORY
 {winners_in_category}
 
-## OTHER TOP WINNERS
 {winners_other}
 
-## NON-WINNERS (FOR COMPARISON)
-{participants_data}
+{participants_data}"""
+    
+    try:
+        cached_content = caching.CachedContent.create(
+            model='gemini-2.5-flash',
+            contents=[context_content],
+            ttl="1800s"  # 30 minutes
+        )
+        use_cache = cached_content.name
+    except Exception as e:
+        print(f"Caching not available: {e}")
+        use_cache = None
+    
+    prompt = f"""
+You are a hackathon judge. Analyze the database and give DIRECT, CONCISE answers.
 
 ## USER'S IDEA
 - Category: {user_category}
@@ -380,8 +405,13 @@ Format your response EXACTLY like this:
 Be brutally honest. Reference specific projects from the data. No fluff.
 """
     
+    config_params = {}
+    if use_cache:
+        config_params["cached_content"] = use_cache
+    
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt
+        contents=prompt,
+        config=types.GenerateContentConfig(**config_params) if config_params else None
     )
     return response.text
