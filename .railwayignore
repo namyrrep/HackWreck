@@ -1,0 +1,7 @@
+hackwreck-front-end/
+node_modules/
+*.tsx
+*.ts
+*.json
+!railway.json
+!requirements.txt
