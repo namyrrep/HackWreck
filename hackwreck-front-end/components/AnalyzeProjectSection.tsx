@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import ReadAloudButton from './ReadAloudButton';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
@@ -246,8 +247,9 @@ const AnalyzeProjectSection: React.FC = () => {
 
           {/* AI Suggestions */}
           <div className="p-6 bg-slate-950 border border-emerald-500/30 rounded-lg">
-            <div className="flex items-center space-x-2 mb-4">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold font-mono text-emerald-500 uppercase">IMPROVEMENT PLAN</h3>
+              <ReadAloudButton text={result.suggestions} accentColor="amber" />
             </div>
             <div className="prose prose-invert prose-emerald max-w-none text-slate-300 font-mono text-sm leading-relaxed">
               <ReactMarkdown 

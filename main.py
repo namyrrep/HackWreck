@@ -1,10 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import uvicorn
 import sys
 import os
+import httpx
 
 # Import from DevScrape package
 from DevScrape import (
@@ -54,6 +56,13 @@ async def lifespan(app: FastAPI):
             print("[OK] Gemini API: Connected")
     except Exception as e:
         print(f"[ERROR] Gemini API: {e}")
+    
+    # Check 4: ElevenLabs API Key
+    elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
+    if elevenlabs_key:
+        print(f"[OK] ElevenLabs Key: Configured ({elevenlabs_key[:8]}...)")
+    else:
+        print("[WARN] ElevenLabs Key: Missing - Read Aloud disabled. Set ELEVENLABS_API_KEY in .env")
     
     print("="*50)
     print("API Docs: http://localhost:8000/docs")
@@ -128,6 +137,11 @@ class TrendResponse(BaseModel):
 class WreckMeResponse(BaseModel):
     success: bool
     analysis: str
+
+
+class TextToSpeechRequest(BaseModel):
+    text: str
+    voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Default: Rachel
 
 
 class ProjectAnalysisRequest(BaseModel):
@@ -210,6 +224,52 @@ async def wreck_me():
         return WreckMeResponse(success=True, analysis=analysis)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/text-to-speech")
+async def text_to_speech(request: TextToSpeechRequest):
+    """
+    Convert text to speech using ElevenLabs API.
+    Returns audio/mpeg binary data.
+    """
+    elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
+    
+    # Debug: print key info
+    print(f"[TTS Debug] Key loaded: {bool(elevenlabs_api_key)}")
+    if elevenlabs_api_key:
+        print(f"[TTS Debug] Key prefix: {elevenlabs_api_key[:8]}...")
+    print(f"[TTS Debug] Text length: {len(request.text)} chars")
+    
+    if not elevenlabs_api_key:
+        raise HTTPException(status_code=500, detail="ElevenLabs API key not configured. Set ELEVENLABS_API_KEY in .env")
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{request.voice_id}"
+    headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": elevenlabs_api_key,
+    }
+    payload = {
+        "text": request.text,
+        "model_id": "eleven_turbo_v2_5",
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+        },
+    }
+    
+    print(f"[TTS Debug] Calling ElevenLabs API...")
+
+    async with httpx.AsyncClient(timeout=60.0) as client_http:
+        resp = await client_http.post(url, headers=headers, json=payload)
+
+    if resp.status_code != 200:
+        # Log full error for debugging
+        print(f"[ElevenLabs Error] Status: {resp.status_code}, Response: {resp.text[:500]}")
+        error_detail = f"ElevenLabs API error ({resp.status_code}): {resp.text[:200]}"
+        raise HTTPException(status_code=resp.status_code, detail=error_detail)
+
+    return Response(content=resp.content, media_type="audio/mpeg")
 
 
 @app.post("/api/analyze-project", response_model=ProjectAnalysisResponse)
